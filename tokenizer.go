@@ -2,7 +2,6 @@ package tokenizer
 
 import (
 	"github.com/sugarme/tokenizer"
-	"github.com/sugarme/tokenizer/model/wordlevel"
 )
 
 type Tokenizer struct {
@@ -36,12 +35,4 @@ func (t *Tokenizer) EncodeBatchSerially(inputs []tokenizer.EncodeInput, addSpeci
 	}
 
 	return encodings, nil
-}
-
-// NewWordLevel creates a WordLevel model from a given vocab.
-func NewWordLevel(vocab map[string]int, unkToken string) *wordlevel.WordLevel {
-	builder := wordlevel.NewWordLevelBuilder()
-	builder.Vocab(vocab)
-	builder.UnkToken(unkToken)
-	return builder.Build()
 }

@@ -11,11 +11,12 @@ import (
 )
 
 type Vocab[T constraints.Integer] struct {
-	Vocab    map[string]T
-	InvVocab map[T]string
+	vocab    map[string]T
+	invVocab map[T]string
+	unkToken string
 }
 
-func NewVocabFromFile[T constraints.Integer](filename string, separator string) (*Vocab[T], error) {
+func NewVocabFromFile[T constraints.Integer](filename, separator, unkToken string) (*Vocab[T], error) {
 	file, err := os.Open(filename)
 	if err != nil {
 		return nil, err
@@ -33,10 +34,10 @@ func NewVocabFromFile[T constraints.Integer](filename string, separator string) 
 		return nil, err
 	}
 
-	return NewVocabFromSlice[T](lines, separator)
+	return NewVocabFromSlice[T](lines, separator, unkToken)
 }
 
-func NewVocabFromSlice[T constraints.Integer](lines []string, separator string) (*Vocab[T], error) {
+func NewVocabFromSlice[T constraints.Integer](lines []string, separator, unkToken string) (*Vocab[T], error) {
 	var vocab = make(map[string]T)
 	var invVocab = make(map[T]string)
 
@@ -73,25 +74,62 @@ func NewVocabFromSlice[T constraints.Integer](lines []string, separator string) 
 	}
 
 	return &Vocab[T]{
-		Vocab:    vocab,
-		InvVocab: invVocab,
+		vocab:    vocab,
+		invVocab: invVocab,
+		unkToken: unkToken,
 	}, nil
 }
 
-func (v *Vocab[T]) TokensToIDs(tokens []string) (ids []T) {
-	for _, token := range tokens {
-		if id, ok := v.Vocab[token]; ok {
-			ids = append(ids, id)
+func (v *Vocab[T]) Vocab() map[string]T {
+	return v.vocab
+}
+
+func (v *Vocab[T]) UnkToken() string {
+	return v.unkToken
+}
+
+func (v *Vocab[T]) TokenToID(token string) (T, error) {
+	id, ok := v.vocab[token]
+	if !ok {
+		id, ok = v.vocab[v.unkToken]
+		if !ok {
+			return 0, fmt.Errorf("missing unknown token %q in vocab", v.unkToken)
 		}
+	}
+	return id, nil
+}
+
+func (v *Vocab[T]) IDToToken(id T) (string, error) {
+	token, ok := v.invVocab[id]
+	if !ok {
+		if _, ok = v.vocab[v.unkToken]; !ok {
+			return "", fmt.Errorf("missing unknown token %q in vocab", v.unkToken)
+		}
+		token = v.unkToken
+	}
+	return token, nil
+}
+
+func (v *Vocab[T]) TokensToIDs(tokens []string) (ids []T, err error) {
+	for _, token := range tokens {
+		var id T
+		id, err = v.TokenToID(token)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
 	}
 	return
 }
 
-func (v *Vocab[T]) IDsToTokens(ids []T) (tokens []string) {
+func (v *Vocab[T]) IDsToTokens(ids []T) (tokens []string, err error) {
 	for _, id := range ids {
-		if token, ok := v.InvVocab[id]; ok {
-			tokens = append(tokens, token)
+		var token string
+		token, err = v.IDToToken(id)
+		if err != nil {
+			return nil, err
 		}
+		tokens = append(tokens, token)
 	}
 	return
 }
