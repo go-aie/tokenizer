@@ -78,11 +78,11 @@ func TestTokenizer_EncodeBatchTexts(t *testing.T) {
 }
 
 func newTokenizer(lines []string) (*aietokenizer.Tokenizer, error) {
-	vocab, err := aietokenizer.NewVocabFromSlice[int](lines, "\t")
+	vocab, err := aietokenizer.NewVocabFromSlice[int](lines, "\t", "OOV")
 	if err != nil {
 		return nil, err
 	}
-	m := aietokenizer.NewWordLevel(vocab.Vocab, "OOV")
+	m := aietokenizer.NewRuneLevel(vocab)
 
 	paddingStrategy := tokenizer.NewPaddingStrategy()
 	paddingParams := tokenizer.PaddingParams{
